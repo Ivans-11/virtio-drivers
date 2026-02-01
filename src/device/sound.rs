@@ -377,7 +377,10 @@ impl<H: Hal, T: Transport> VirtIOSound<H, T> {
             self.set_up()?;
             self.set_up = true;
         }
-        if period_bytes == 0 || period_bytes > buffer_bytes || !buffer_bytes.is_multiple_of(period_bytes) {
+        if period_bytes == 0
+            || period_bytes > buffer_bytes
+            || !buffer_bytes.is_multiple_of(period_bytes)
+        {
             return Err(Error::InvalidParam);
         }
         let request_hdr = VirtIOSndHdr::from(CommandCode::RPcmSetParams);
