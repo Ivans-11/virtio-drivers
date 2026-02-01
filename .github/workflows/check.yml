@@ -1,55 +1,42 @@
-name: CI
+name: Quality Checks
 
 on:
-  push:
-    branches: [master]
-  pull_request:
+  workflow_call:
+
+env:
+  CARGO_TERM_COLOR: always
+  RUST_BACKTRACE: 1
 
 jobs:
   check:
+    name: Quality Checks
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Check code format
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
-      - name: Clippy
-        uses: actions-rs/clippy-check@v1
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: Check code format
+        run: cargo fmt --all -- --check
+
+      - name: Clippy
+        run: cargo clippy -- -D warnings
+
       - name: Build with no features
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --no-default-features
+        run: cargo build --no-default-features
+
       - name: Build with all features
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --all-features
-      - name: Docs
-        uses: actions-rs/cargo@v1
-        with:
-          command: doc
-      - name: Test with no features
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --no-default-features
-      - name: Test with all features
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features
+        run: cargo build --all-features
+
+      - name: Build documentation
+        run: cargo doc
 
   examples:
+    name: Examples
     runs-on: ubuntu-24.04
     strategy:
       fail-fast: false
@@ -65,16 +52,27 @@ jobs:
             packages: qemu-system-misc
           - example: x86_64
             packages: qemu-system-x86
+
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt
+
       - name: Install QEMU
         run: sudo apt update && sudo apt install ${{ matrix.packages }} && sudo chmod 666 /dev/vhost-vsock
+
       - name: Check code format
         working-directory: examples/${{ matrix.example }}
         run: cargo fmt --all -- --check
+
       - name: Build
         working-directory: examples/${{ matrix.example }}
         run: make kernel
+
       - name: Run
         timeout-minutes: 1
         working-directory: examples/${{ matrix.example }}
