@@ -266,6 +266,7 @@ impl<H: Hal, T: Transport> VirtIOGpu<H, T> {
         rsp.check_type(Command::OK_NODATA)
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn update_cursor(
         &mut self,
         resource_id: u32,
